@@ -1,0 +1,147 @@
+<?php
+// CETAK BARANG MASUK
+session_start();
+ob_start();
+
+// Panggil koneksi database.php untuk koneksi database
+require_once "../../config/database.php";
+// panggil fungsi untuk format tanggal
+include "../../config/fungsi_tanggal.php";
+// panggil fungsi untuk format rupiah
+include "../../config/fungsi_rupiah.php";
+
+$hari_ini = date("d-m-Y");
+
+// ambil data hasil submit dari form
+$tgl1     = $_GET['tgl_awal'];
+$explode  = explode('-',$tgl1);
+$tgl_awal = $explode[2]."-".$explode[1]."-".$explode[0];
+
+$tgl2      = $_GET['tgl_akhir'];
+$explode   = explode('-',$tgl2);
+$tgl_akhir = $explode[2]."-".$explode[1]."-".$explode[0];
+
+$br_jenis   = $_GET['jenis'];
+
+if ($_GET['jenis']) {
+    $qr_jenis = "jenis='".$br_jenis."' AND ";
+    $s_jenis = $br_jenis;
+} else {
+    $qr_jenis = "";
+    $s_jenis = "Semua Jenis";
+}
+
+if (isset($_GET['tgl_awal'])) {
+    $no    = 1;
+    // fungsi query untuk menampilkan data dari tabel Barang masuk
+    $query = mysqli_query($mysqli, "SELECT a.kode_transaksi,a.tanggal_revisi,a.kode_barang,a.stok_real,a.stok_awal,a.stok_revisi,b.kode_barang,b.nama_barang,b.satuan
+                                    FROM barang_stok as a INNER JOIN tb_barang as b ON a.kode_barang=b.kode_barang
+                                    WHERE $qr_jenis a.tanggal_revisi BETWEEN '$tgl_awal' AND '$tgl_akhir'
+                                    ORDER BY a.kode_transaksi ASC") 
+                                    or die('Ada kesalahan pada query tampil Transaksi : '.mysqli_error($mysqli));
+    $count  = mysqli_num_rows($query);
+}
+?>
+<html xmlns="http://www.w3.org/1999/xhtml"> <!-- Bagian halaman HTML yang akan konvert -->
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+        <title>Laporan Data Revisi Stok Barang | Toko Secila</title>
+        <link rel="stylesheet" type="text/css" href="../../assets/css/laporan.css" />
+    </head>
+    <body>
+        <div id="title">
+            LAPORAN DATA REVISI STOK BARANG
+        </div>
+    <?php  
+    if ($tgl_awal==$tgl_akhir) { ?>
+        <div id="title-tanggal">
+            Tanggal <?php echo tgl_eng_to_ind($tgl1); ?>
+        </div>
+    <?php
+    } else { ?>
+        <div id="title-tanggal">
+            Tanggal <?php echo tgl_eng_to_ind($tgl1); ?> s.d. <?php echo tgl_eng_to_ind($tgl2); ?>
+        </div>
+    <?php
+    }
+    ?>
+        <div id="title-tanggal">
+            Jenis : <?php echo $s_jenis ; ?>
+        </div>
+    
+    
+        
+        <hr><br>
+        <div id="isi">
+            <table width="100%" border="0.3" cellpadding="0" cellspacing="0">
+                <thead style="background:#e8ecee">
+                    <tr class="tr-title">
+                        <th height="20" align="center" valign="middle">NO.</th>
+                        <th height="20" align="center" valign="middle">KODE TRANSAKSI</th>
+                        <th height="20" align="center" valign="middle">TANGGAL</th>
+                        <th height="20" align="center" valign="middle">KODE BARANG</th>
+                        <th height="20" align="center" valign="middle">NAMA BARANG</th>
+                        <th height="20" align="center" valign="middle">STOK AWAL</th>
+                        <th height="20" align="center" valign="middle">STOK REAL</th>
+                        <th height="20" align="center" valign="middle">SATUAN</th>
+                    </tr>
+                </thead>
+                <tbody>
+<?php
+    // jika data ada
+    if($count == 0) {
+        echo "  <tr>
+                    <td width='40' height='13' align='center' valign='middle'></td>
+                    <td width='120' height='13' align='center' valign='middle'></td>
+                    <td width='80' height='13' align='center' valign='middle'></td>
+                    <td width='80' height='13' align='center' valign='middle'></td>
+                    <td width='155' height='13' valign='middle'></td>
+                    <td width='100' height='13' align='right' valign='middle'></td>
+                    <td width='80' height='13' align='center' valign='middle'></td>
+                </tr>";
+    }
+    // jika data tidak ada
+    else {
+        // tampilkan data
+        while ($data = mysqli_fetch_assoc($query)) {
+            $tanggal       = $data['tanggal_revisi'];
+            $exp           = explode('-',$tanggal);
+            $tanggal_revisi = $exp[2]."-".$exp[1]."-".$exp[0];
+
+            // menampilkan isi tabel dari database ke tabel di aplikasi
+            echo "  <tr>
+                        <td width='40' height='13' align='center' valign='middle'>$no</td>
+                        <td width='140' height='13' align='center' valign='middle'>$data[kode_transaksi]</td>
+                        <td width='100' height='13' align='center' valign='middle'>$tanggal_revisi</td>
+                        <td width='20' height='13' align='center' valign='middle'>$data[kode_barang]</td>
+                        <td width='155' height='13' valign='middle'>$data[nama_barang]</td>
+                        <td width='100' height='13' align='right' valign='middle'>$data[stok_awal]</td>
+                        <td width='100' height='13' align='right' valign='middle'>$data[stok_real]</td>
+                        <td width='80' height='13' align='center' valign='middle'>$data[satuan]</td>
+                    </tr>";
+            $no++;
+        }
+    }
+?>	
+                </tbody>
+            </table>
+
+            <div id="footer-tanggal">
+                Makassar, <?php echo tgl_eng_to_ind("$hari_ini"); ?>
+            </div>
+            <div id="footer-jabatan">
+                Pimpinan
+            </div>
+            
+            <div id="footer-nama">
+                (_____________________________)
+            </div>
+        </div>
+
+        <!-- Script Untuk Print Laporan -->
+        <script>
+		window.print();
+	    </script>
+
+    </body>
+</html><!-- Akhir halaman HTML yang akan di konvert -->
